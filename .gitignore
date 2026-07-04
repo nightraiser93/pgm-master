@@ -1,0 +1,24 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+*.egg-info/
+
+# Node / frontend build
+frontend/node_modules/
+frontend/dist/
+
+# pgm worktrees (created as repo siblings, but guard anyway)
+*-worktrees/
+
+# Secrets / local pgm state (never commit)
+# telegram.json + projects.json live in ~/.pgm, outside the repo — listed here as a reminder.
+
+# Claude Code local settings (machine-specific)
+.claude/settings.local.json
+
+# OS / editor
+.DS_Store
+*.swp
+.idea/
+.vscode/
