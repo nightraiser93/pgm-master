@@ -10,7 +10,8 @@ the `pgm` skill (status gates, one task = one session, one branch + one PR, work
 is the *driver*; the `pgm` skill is the *rulebook*.
 
 `ARGUMENTS` may carry: a task id (`KAUT-00003` → work that one), a count or `parallel N`
-(fan out N tasks — requires the confirm step below), or nothing (pick one READY task).
+(cap the fan-out at N), or nothing (auto-detect how many independent READY tasks exist and
+**propose** fanning out to all of them — user approves or caps; see step 3).
 
 ## Procedure
 1. **Locate the board.** Confirm `pgm/` exists here. If not, stop and offer to bootstrap
@@ -22,16 +23,20 @@ is the *driver*; the `pgm` skill is the *rulebook*.
      gate) — tell the user which Backlog tickets to approve (or that everything is blocked on open
      deps), then stop.
    - **READY tasks exist** → continue.
-3. **Choose the task(s).**
-   - Id in `ARGUMENTS` → that one (must be in READY).
-   - Else default to **exactly one** (the first READY, or ask which if ambiguous).
-   - **Parallel only on explicit opt-in.** If the user asked for >1 (a count / "parallel"), FIRST
-     **announce and get a yes**: which tasks, how many worktrees + concurrent sub-sessions, and that
-     each is a separate token budget (**multiplies token use**). Never exceed the agreed count.
+3. **Choose the task(s) — propose the fan-out.**
+   - Id in `ARGUMENTS` → that one (must be in READY). Skip the proposal.
+   - Else **count the independent READY tasks** (READY = all deps met; independent = no shared
+     ticket dep chain — treat each READY ticket as independent unless its Depends-on names another).
+   - **Announce the plan and get a yes before spawning anything.** State: *"N independent approved
+     tasks: `<id>`, `<id>`, … — I'll spawn N parallel agents (N worktrees, N sessions, N separate
+     token budgets — **multiplies token use**). Approve, or give me a limit."* Then wait.
+   - Respect the answer: a count / `parallel N` in `ARGUMENTS` (or the user's reply) **caps** the
+     fan-out at N — take the first N READY. `1` (or "one") → single task. Never exceed the cap.
 4. **Start + isolate:** `python3 pgm/board.py wt <id>` — moves it `Approved → In Progress` and makes
    a git worktree at `<repo>-worktrees/<branch>/`. `cd` into that worktree.
 5. **Build the task, and only that task.** Read the ticket's Intent + Acceptance criteria. Implement,
-   test, commit on its branch with the `<KEY>-#####` in the message. Keep context tight.
+   test, commit on its branch with the `<KEY>-#####` in the message — **or the Jira key if the ticket
+   has a `jira:` association** (`board.py wt`/`start` print the exact ref to use). Keep context tight.
 6. **PR, then review:** from the **main checkout**, open the PR first with `gh pr create` — ready (not
    draft), conventional title with the id, body = Intent + Acceptance criteria + What changed + Tests.
    Capture the PR URL, then `python3 pgm/board.py review <id> "<pr-url>"` — this moves it to `In Review`

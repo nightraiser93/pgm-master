@@ -17,6 +17,7 @@ CLI (via the shim, `python3 pgm/board.py …`):
   reopen  <id> [msg]        Working/In Review -> In Progress   (HUMAN)
   link    <id> <rel> <tgt>  add a cross-task link (see LINK_RELS)
   unlink  <id> <tgt>        remove links to <tgt>
+  jira    <id> <JIRA-KEY>   associate a Jira issue (use "-"/"clear" to remove)
   ready                     list workable tasks (Approved, deps done) — one per session
   wt <id>                   start <id> + create an isolated git worktree (parallel work)
   wt rm <id>                remove <id>'s worktree (after its PR is raised)
@@ -28,7 +29,7 @@ CLI (via the shim, `python3 pgm/board.py …`):
 project's ticket .md (cross-project). Links live in the `links:` frontmatter
 as `<rel>:<abs-path>`.
 """
-import os, re, sys, json, datetime, pathlib, subprocess
+import os, re, sys, json, html, datetime, pathlib, subprocess
 
 HERE = pathlib.Path(os.environ.get("PGM_DIR", ".")).resolve()
 START, END = "<!-- BOARD:START -->", "<!-- BOARD:END -->"
@@ -79,6 +80,11 @@ def branch_name(fm: dict) -> str:
               "docs": "docs", "refactor": "refactor"}.get(fm.get("type", "feature"), "feat")
     slug = re.sub(r"[^a-z0-9]+", "-", fm.get("title", "").lower()).strip("-")[:40].strip("-")
     return f"{prefix}/{fm.get('id')}-{slug}"
+
+def commit_ref(fm: dict) -> str:
+    """The id commits should reference: the Jira key if associated, else the pgm id.
+    The pgm id always owns the branch/board; Jira just rides the commit trail."""
+    return (fm.get("jira") or "").strip() or fm.get("id", "")
 
 # ---------- notifications (Telegram, stdlib only, best-effort) ----------
 def project_name() -> str:
@@ -176,18 +182,22 @@ def notify_transition(cmd: str, fm: dict, body: str, cur: str, to: str, msg: str
     head = heads.get(cmd)
     if not head:
         return
+    esc = html.escape
     tid, title, epic = fm.get("id"), fm.get("title", ""), fm.get("epic", "")
-    lines = [f"<b>{head}</b>",
-             f"<b>{project_name()}</b> · <code>{tid}</code>  {title}"]
+    lines = [f"<b>{esc(head)}</b>",
+             f"<b>{esc(project_name())}</b> · <code>{esc(tid)}</code>  {esc(title)}"]
     if epic:
-        lines.append(f"Epic: {epic}")
-    lines.append(f"Status: {cur} → {to}")
+        lines.append(f"Epic: {esc(epic)}")
+    jira = (fm.get("jira") or "").strip()
+    if jira:
+        lines.append(f"Jira: <code>{esc(jira)}</code>")
+    lines.append(f"Status: {esc(cur)} → {esc(to)}")
     intent = section(body, "Intent")
     if intent:
         intent = re.sub(r"\s+", " ", intent).strip()
-        lines.append("\n" + (intent[:500] + ("…" if len(intent) > 500 else "")))
+        lines.append("\n" + esc(intent[:500] + ("…" if len(intent) > 500 else "")))
     if msg:  # e.g. the PR URL passed to `review`/`working`
-        lines.append(f"\n🔗 {msg}")
+        lines.append(f"\n🔗 {esc(msg)}")
     if send_telegram("\n".join(lines)):
         print("telegram: notified")
 
@@ -213,6 +223,11 @@ def transition(cmd: str, tid: str, msg: str):
     print(f"{f.stem}: {cur} → {to}  ({actor})")
     if cmd == "start":
         print(f"branch: {branch_name(fm)}   # every change ↔ a task (see CLAUDE.md)")
+        ref = commit_ref(fm)
+        note = f"commit ref: {ref}"
+        if fm.get("jira"):
+            note += f"   # Jira issue — use this in commits instead of {fm.get('id')}"
+        print(note)
     notify_transition(cmd, fm, body, cur, to, msg)
     regen()
 
@@ -277,6 +292,30 @@ def remove_link(tid: str, tgt: str):
         text = re.sub(r"(?m)^links:.*\n", "", text, count=1)
     f.write_text(text)
     print(f"{f.stem}: unlinked {target}")
+    regen()
+
+def cmd_jira(tid: str, value: str):
+    """Associate (or clear) a Jira issue key on a ticket. The pgm id is unchanged;
+    Jira only rides the commit trail. Clear with '-', 'clear', 'none', or ''."""
+    f = ticket_path(tid)
+    if not f.exists():
+        sys.exit(f"no such ticket: {f.name}")
+    text = f.read_text()
+    date = datetime.date.today().isoformat()
+    if value.strip().lower() in ("", "-", "clear", "none"):
+        if not re.search(r"(?m)^jira:.*$", text):
+            sys.exit(f"{f.stem} has no Jira association")
+        text = re.sub(r"(?m)^jira:.*\n", "", text, count=1)
+        tail = f"- {date} [jira] cleared Jira association"
+        print(f"{f.stem}: Jira association cleared")
+    else:
+        jira = value.strip()
+        text = set_fm_field(text, "jira", jira)
+        tail = f"- {date} [jira] associated {jira}"
+        print(f"{f.stem}: Jira {jira} (commits now reference {jira} instead of {parse_fm(text).get('id')})")
+    text = re.sub(r"^- _\(none yet.*\)_\s*$", "", text, flags=re.M)
+    text = text.rstrip() + "\n" + tail + "\n"
+    f.write_text(text)
     regen()
 
 # ---------- readiness (one task, one session) ----------
@@ -414,11 +453,14 @@ def cmd_worktree_add(tid: str):
         print(f"created worktree: {wt}")
     tid_full = fm.get("id")
     print(f"branch: {branch}")
+    ref = commit_ref(fm)
+    if fm.get("jira"):
+        print(f"commit ref: {ref}   # Jira issue — use in commits instead of {tid_full}")
     print("\n⚠ this worktree is meant to be worked in a SEPARATE Claude session — its own token budget.")
     print("  running several in parallel multiplies token use. confirm the count with the user first.")
     print("\nnext — in a fresh session, one task only:")
     print(f"  cd {wt}")
-    print(f"  # build {tid_full} here, commit on this branch")
+    print(f"  # build {tid_full} here, commit on this branch (reference {ref} in commit messages)")
     print(f"  python3 {root}/pgm/board.py review {tid_full}   # In Review + open PR (run from main checkout)")
     print(f"  python3 {root}/pgm/board.py wt rm {tid_full}     # once the PR is raised, drop the worktree")
 
@@ -469,11 +511,12 @@ def regen():
             continue
         dep = ", ".join(fm.get("depends", [])) or "—"
         rows.append((fm["id"], fm.get("title", ""), fm.get("epic", ""),
-                     fm.get("status", "Backlog"), dep, f.name))
-    table = ["| ID | Title | Epic | Status | Depends on |",
-             "|----|-------|------|--------|------------|"]
-    for _id, title, epic, status, dep, fname in rows:
-        table.append(f"| [{_id}]({fname}) | {title} | {epic} | {status} | {dep} |")
+                     fm.get("status", "Backlog"), dep, f.name,
+                     (fm.get("jira") or "").strip() or "—"))
+    table = ["| ID | Jira | Title | Epic | Status | Depends on |",
+             "|----|------|-------|------|--------|------------|"]
+    for _id, title, epic, status, dep, fname, jira in rows:
+        table.append(f"| [{_id}]({fname}) | {jira} | {title} | {epic} | {status} | {dep} |")
     counts = {}
     for r in rows:
         counts[r[3]] = counts.get(r[3], 0) + 1
@@ -528,6 +571,10 @@ def main():
         if len(sys.argv) < 4:
             sys.exit("usage: board.py unlink <id> <target>")
         remove_link(sys.argv[2], sys.argv[3]); return
+    if cmd == "jira":
+        if len(sys.argv) < 3:
+            sys.exit('usage: board.py jira <id> <JIRA-KEY>   (use "-"/"clear" to remove)')
+        cmd_jira(sys.argv[2], " ".join(sys.argv[3:])); return
     if cmd not in TRANSITIONS:
         sys.exit(__doc__)
     if len(sys.argv) < 3:

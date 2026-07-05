@@ -1,15 +1,18 @@
-import { useEffect, useMemo, useState } from "react"
+import { useMemo, useState } from "react"
 import { useSearchParams } from "react-router-dom"
-import { Search, Link2 } from "lucide-react"
+import { Search, Link2, AlertCircle, Bot, User } from "lucide-react"
 import {
   api,
   STATUS_ORDER,
   ACTIONS_FOR,
   ACTION_LABEL,
+  needsAttention,
   type Action,
-  type Project,
-  type Ticket,
 } from "@/lib/api"
+import { useProjects } from "@/lib/projects-context"
+import { useTaskRows, type Row } from "@/lib/rows"
+import { useAgentTaskKeys } from "@/lib/use-agent-tasks"
+import { cn } from "@/lib/utils"
 import { StatusBadge } from "@/components/StatusBadge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -29,27 +32,41 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 
-type Row = Ticket & { projectKey: string; projectName: string; root: string }
+function JiraBadge({ row }: { row: Row }) {
+  if (!row.jira) return null
+  const badge = (
+    <Badge
+      variant="outline"
+      className="border-blue-400/40 font-mono text-[11px] text-blue-600 dark:text-blue-400"
+    >
+      {row.jira}
+    </Badge>
+  )
+  if (!row.jiraBase) return badge
+  return (
+    <a
+      href={`${row.jiraBase}/browse/${row.jira}`}
+      target="_blank"
+      rel="noreferrer"
+      onClick={(e) => e.stopPropagation()}
+      title={`Open ${row.jira} in Jira`}
+    >
+      {badge}
+    </a>
+  )
+}
 
 export function Tasks() {
   const [params, setParams] = useSearchParams()
-  const [projects, setProjects] = useState<Project[]>([])
+  const { projects, reload } = useProjects()
   const [q, setQ] = useState("")
   const [busy, setBusy] = useState<string | null>(null)
   const [open, setOpen] = useState<Row | null>(null)
+  const agentTaskKeys = useAgentTaskKeys()
 
   const projectFilter = params.get("project") ?? "all"
   const statusFilter = params.get("status") ?? "all"
-
-  async function load() {
-    setProjects(await api.projects())
-  }
-
-  useEffect(() => {
-    load()
-    const t = setInterval(load, 5000)
-    return () => clearInterval(t)
-  }, [])
+  const attentionOnly = params.get("attention") === "1"
 
   function setParam(k: string, v: string) {
     const next = new URLSearchParams(params)
@@ -58,40 +75,36 @@ export function Tasks() {
     setParams(next, { replace: true })
   }
 
-  const rows: Row[] = useMemo(
-    () =>
-      projects
-        .filter((p) => !p.error)
-        .flatMap((p) =>
-          p.tickets.map((t) => ({
-            ...t,
-            projectKey: p.key,
-            projectName: p.name,
-            root: p.root,
-          })),
-        ),
-    [projects],
+  const rows = useTaskRows()
+
+  const attentionCount = useMemo(
+    () => rows.filter((r) => needsAttention(r.status)).length,
+    [rows],
   )
 
   const filtered = useMemo(() => {
     const term = q.trim().toLowerCase()
-    return rows.filter(
-      (r) =>
-        (projectFilter === "all" || r.projectKey === projectFilter) &&
-        (statusFilter === "all" || r.status === statusFilter) &&
-        (!term ||
-          r.title.toLowerCase().includes(term) ||
-          r.id.toLowerCase().includes(term) ||
-          r.epic.toLowerCase().includes(term) ||
-          r.desc.toLowerCase().includes(term)),
-    )
-  }, [rows, projectFilter, statusFilter, q])
+    return rows
+      .filter(
+        (r) =>
+          (projectFilter === "all" || r.projectKey === projectFilter) &&
+          (statusFilter === "all" || r.status === statusFilter) &&
+          (!attentionOnly || needsAttention(r.status)) &&
+          (!term ||
+            r.title.toLowerCase().includes(term) ||
+            r.id.toLowerCase().includes(term) ||
+            (r.jira?.toLowerCase().includes(term) ?? false) ||
+            r.epic.toLowerCase().includes(term) ||
+            r.desc.toLowerCase().includes(term)),
+      )
+      .sort((a, b) => Number(needsAttention(b.status)) - Number(needsAttention(a.status)))
+  }, [rows, projectFilter, statusFilter, attentionOnly, q])
 
   async function act(r: Row, action: Action) {
     setBusy(r.id)
     try {
       await api.action(r.root, r.id, action)
-      await load()
+      await reload()
     } catch (e) {
       alert((e as Error).message)
     } finally {
@@ -114,6 +127,27 @@ export function Tasks() {
           {filtered.length} of {rows.length} across all projects.
         </p>
       </div>
+
+      {attentionCount > 0 && (
+        <button
+          onClick={() => setParam("attention", attentionOnly ? "all" : "1")}
+          className={cn(
+            "flex w-full items-center gap-3 rounded-lg border px-4 py-3 text-left transition-colors",
+            attentionOnly
+              ? "border-amber-500/60 bg-amber-500/15"
+              : "border-amber-500/30 bg-amber-500/5 hover:bg-amber-500/10",
+          )}
+        >
+          <AlertCircle className="size-5 shrink-0 text-amber-600 dark:text-amber-400" />
+          <span className="text-sm font-medium text-amber-800 dark:text-amber-300">
+            {attentionCount} task{attentionCount === 1 ? "" : "s"} need
+            {attentionCount === 1 ? "s" : ""} your action
+          </span>
+          <span className="ml-auto text-xs font-medium text-amber-700/80 dark:text-amber-400/80">
+            {attentionOnly ? "Showing only these — click to clear" : "Click to focus"}
+          </span>
+        </button>
+      )}
 
       <div className="flex flex-wrap items-center gap-3">
         <div className="relative min-w-56 flex-1">
@@ -168,6 +202,7 @@ export function Tasks() {
               busy={busy === r.id}
               onAct={act}
               onOpen={() => setOpen(r)}
+              agentActive={agentTaskKeys.has(`${r.root}|${r.id}`)}
               showProject={projectFilter === "all"}
             />
           ))}
@@ -222,25 +257,51 @@ function TaskCard({
   busy,
   onAct,
   onOpen,
+  agentActive,
   showProject,
 }: {
   r: Row
   busy: boolean
   onAct: (r: Row, a: Action) => void
   onOpen: () => void
+  agentActive: boolean
   showProject: boolean
 }) {
+  const attention = needsAttention(r.status)
+
   return (
     <Card
       onClick={onOpen}
-      className="flex cursor-pointer flex-col transition-shadow hover:shadow-md"
+      className={cn(
+        "flex cursor-pointer flex-col border-l-4 transition-shadow hover:shadow-md",
+        attention
+          ? "border-l-amber-500 shadow-sm shadow-amber-500/10 ring-1 ring-amber-500/20"
+          : agentActive
+            ? "border-l-blue-500 shadow-sm shadow-blue-500/10 ring-1 ring-blue-500/20"
+            : "border-l-transparent",
+      )}
     >
       <CardContent className="flex flex-1 flex-col gap-3 py-4">
         <div className="flex items-center justify-between gap-2">
-          <span className="font-mono text-xs text-muted-foreground tabular-nums">
-            {r.id}
+          <span className="flex items-center gap-1.5">
+            <span className="font-mono text-xs text-muted-foreground tabular-nums">
+              {r.id}
+            </span>
+            <JiraBadge row={r} />
           </span>
-          <StatusBadge status={r.status} />
+          <span className="flex items-center gap-1.5">
+            {attention && (
+              <span title="Needs your action">
+                <User className="size-3.5 shrink-0 text-amber-600 dark:text-amber-400" />
+              </span>
+            )}
+            {!attention && agentActive && (
+              <span title="An agent is working this task">
+                <Bot className="size-3.5 shrink-0 text-blue-600 dark:text-blue-400" />
+              </span>
+            )}
+            <StatusBadge status={r.status} />
+          </span>
         </div>
 
         <h3 className="text-sm font-semibold leading-snug">{r.title}</h3>
@@ -299,6 +360,7 @@ function TaskDialog({
                 <Badge variant="secondary" className="font-mono text-[11px]">
                   {row.projectKey}
                 </Badge>
+                <JiraBadge row={row} />
                 <StatusBadge status={row.status} />
               </div>
               <DialogTitle className="pt-1 text-lg leading-snug">

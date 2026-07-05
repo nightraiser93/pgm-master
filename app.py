@@ -10,7 +10,7 @@ respected.
 Run:  uvicorn app:app --reload --port 7777      (or: python3 app.py)
 """
 from __future__ import annotations
-import json, subprocess, sys, pathlib
+import json, re, subprocess, sys, pathlib
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
@@ -85,12 +85,15 @@ def read_project(root: str) -> dict | None:
             continue
         tickets.append({"id": fm.get("id", f.stem), "title": fm.get("title", ""),
                         "epic": fm.get("epic", ""), "status": fm.get("status", "Backlog"),
-                        "depends": fm.get("depends", []), "desc": parse_body(raw)})
+                        "depends": fm.get("depends", []),
+                        "jira": (fm.get("jira") or "").strip(), "desc": parse_body(raw)})
     counts = {s: 0 for s in STATUS_ORDER}
     for t in tickets:
         counts[t["status"]] = counts.get(t["status"], 0) + 1
     return {"root": root, "key": key, "name": meta.get("name", key),
-            "status": meta.get("status", ""), "counts": counts, "tickets": tickets}
+            "status": meta.get("status", ""),
+            "jira_base": (meta.get("jira_base") or "").strip().rstrip("/"),
+            "counts": counts, "tickets": tickets}
 
 def all_projects() -> list[dict]:
     out = []
@@ -98,6 +101,40 @@ def all_projects() -> list[dict]:
         p = read_project(root)
         out.append(p if p else {"root": root, "key": "?", "name": root,
                                  "error": "no pgm/project.md", "tickets": [], "counts": {}})
+    return out
+
+# ---------- live agent sessions ----------
+def match_project(cwd: str, projects: list[dict]) -> dict | None:
+    """Which registered project a session's cwd belongs to — either the repo
+    itself or one of its `<repo>-worktrees/<branch>` checkouts."""
+    for p in projects:
+        root = pathlib.Path(p["root"])
+        if cwd == str(root) or cwd.startswith(str(root) + "/"):
+            return p
+        wt_base = root.parent / f"{root.name}-worktrees"
+        if cwd == str(wt_base) or cwd.startswith(str(wt_base) + "/"):
+            return p
+    return None
+
+def api_agents() -> list[dict]:
+    try:
+        r = subprocess.run(["claude", "agents", "--json"], capture_output=True, text=True, timeout=10)
+        sessions = json.loads(r.stdout) if r.returncode == 0 and r.stdout.strip() else []
+    except (FileNotFoundError, subprocess.TimeoutExpired, json.JSONDecodeError):
+        sessions = []
+    projects = [p for p in all_projects() if not p.get("error")]
+    out = []
+    for s in sessions:
+        cwd = s.get("cwd", "")
+        proj = match_project(cwd, projects)
+        task_id = None
+        if proj:
+            m = re.search(rf"{re.escape(proj['key'])}-\d{{5}}", cwd)
+            task_id = m.group(0) if m else None
+        out.append({**s, "root": proj["root"] if proj else None,
+                    "projectKey": proj["key"] if proj else None,
+                    "projectName": proj["name"] if proj else None,
+                    "taskId": task_id})
     return out
 
 # ---------- api ----------
@@ -113,6 +150,10 @@ class ActionIn(BaseModel):
 @app.get("/api/projects")
 def api_projects():
     return all_projects()
+
+@app.get("/api/agents")
+def api_agents_route():
+    return api_agents()
 
 @app.post("/api/register")
 def api_register(inp: RegisterIn):

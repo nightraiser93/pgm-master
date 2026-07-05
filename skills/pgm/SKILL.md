@@ -50,7 +50,7 @@ so concurrent sessions never collide:
 No code without a ticket. Ticket → branch → PR are one chain.
 1. **Task first.** Every change traces to a `<KEY>-#####`. None exists? `board.py new "…"` and get it **Approved** first.
 2. **One branch per task:** `<type>/<KEY>-#####-<slug>` (gitflow prefix), created at `start` (`board.py start` prints it).
-3. **Commits reference** the `<KEY>-#####`.
+3. **Commits reference** the `<KEY>-#####` — **or the Jira key** if the ticket has a `jira:` association (`board.py start`/`wt` print the exact ref). Branch, board, and PR still use the pgm id.
 4. **One PR per task**, opened at `review`: conventional title with the id; body = Intent + Acceptance criteria + What changed + Tests. Ready, not draft.
 5. **Merge + human `working`** closes the loop.
 
@@ -70,10 +70,13 @@ python3 pgm/board.py reopen  <id> [msg]  # Working/In Review -> In Progress  (HU
 python3 pgm/board.py new "title" [epic]  # scaffold next <KEY>-##### (Backlog)
 python3 pgm/board.py link   <id> <rel> <target> [note]   # blocked-by|blocks|relates-to|duplicates|depends-on
 python3 pgm/board.py unlink <id> <target>
+python3 pgm/board.py jira   <id> <JIRA-KEY>              # associate a Jira issue ("-"/"clear" removes)
 ```
 `<id>` accepts `1`, `00001`, or `<KEY>-00001`. Illegal jumps are refused (can't skip a gate).
 Every transition auto-stamps a dated comment — that's the audit trail. Dependencies live in
 `depends: [00002]` (same-project) or `links:` (`blocked-by`/`depends-on`, cross-project ok).
+Optional `jira: PROJ-1234` associates a Jira issue — the pgm id stays the task's identity, but
+commits reference the Jira key instead (the board + monitor show it too).
 
 ## Writing tickets
 One ticket = one **vertical slice** (end-to-end value where possible). Keep frontmatter accurate;

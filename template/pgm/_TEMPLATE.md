@@ -5,6 +5,7 @@ status: Backlog
 type: feature
 epic: E# <name>
 depends: []
+# jira: PROJ-1234        # optional — set via `board.py jira <id> <KEY>`; commits then reference this
 ---
 # KAUT-##### — <title>
 
