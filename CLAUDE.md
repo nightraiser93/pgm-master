@@ -15,7 +15,7 @@ gates (Approve / Mark Working) clickable.
 Symlinks make pgm single-source — edit here, live everywhere:
 ```
 ln -s "$PWD/pgm_engine.py" ~/.pgm/pgm_engine.py     # engine
-# skills: pgm (rulebook) + pgm-codeit (/pgm-codeit dev-loop driver)
+# skills: pgm (rulebook) + pgm-codeit (/pgm-codeit dev-loop driver) + pgm-add-task (/pgm-add-task ticket creator)
 for s in "$PWD"/skills/*/; do n=$(basename "$s"); mkdir -p ~/.claude/skills/"$n"; \
   ln -sf "$s/SKILL.md" ~/.claude/skills/"$n"/SKILL.md; done
 ```
@@ -25,6 +25,7 @@ for s in "$PWD"/skills/*/; do n=$(basename "$s"); mkdir -p ~/.claude/skills/"$n"
 - `skills/` — canonical, git-tracked, symlinked into `~/.claude/skills/`:
   - `skills/pgm/SKILL.md` — the **agent-rules doc** (the `pgm` skill; the passive rulebook). Keep in sync with `PGM-SPEC.md`.
   - `skills/pgm-codeit/SKILL.md` — the **`/pgm-codeit` command** (the active driver: read board → pick READY → start→build→review→PR).
+  - `skills/pgm-add-task/SKILL.md` — the **`/pgm-add-task` command** (creates ticket(s) from a doc — split into multiple when it warrants — or by interviewing the user).
 - `template/pgm/` — bootstrap kit copied into new projects (shim `board.py`, `CLAUDE.md`, `_TEMPLATE.md`, `project.md`, `README.md`). Contains **no** engine logic.
 - `app.py` — FastAPI dashboard. Endpoints: `/`, `/api/projects`, `/api/register`, `/api/unregister`, `/api/action`.
 - **Actions shell out to each project's `pgm/board.py`** (the shim → engine) — so per-project keys, gate rules, and audit comments are respected. The monitor never edits tickets directly.
@@ -34,7 +35,7 @@ for s in "$PWD"/skills/*/; do n=$(basename "$s"); mkdir -p ~/.claude/skills/"$n"
 Follows the pgm change discipline once this repo has its own `pgm/` folder (see PGM-SPEC.md):
 every change ↔ a task, branch `<type>/<KEY>-#####-<slug>`, PR carries the task. The pgm
 **engine and rules are canonical in this repo** — edit `pgm_engine.py` / `PGM-SPEC.md` /
-`skills/pgm/SKILL.md` / `skills/pgm-codeit/SKILL.md` / `template/pgm/CLAUDE.md` here; projects
+`skills/pgm/SKILL.md` / `skills/pgm-codeit/SKILL.md` / `skills/pgm-add-task/SKILL.md` / `template/pgm/CLAUDE.md` here; projects
 inherit automatically (engine + skills, via symlink) or on next template copy (bootstrap docs).
 Edits to the rules should land in **both** `PGM-SPEC.md` and `skills/pgm/SKILL.md` (spec = full
 standard, skill = agent-facing subset).
