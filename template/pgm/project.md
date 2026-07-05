@@ -2,6 +2,7 @@
 key: XXX
 name: <Project Name>
 status: active
+# jira_base: https://your-domain.atlassian.net   # optional — makes Jira badges in the monitor clickable
 ---
 # <Project Name>
 

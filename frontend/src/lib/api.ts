@@ -4,6 +4,7 @@ export type Ticket = {
   epic: string
   status: string
   depends: string[]
+  jira?: string
   desc: string
 }
 
@@ -12,6 +13,7 @@ export type Project = {
   key: string
   name: string
   status?: string
+  jira_base?: string
   counts: Record<string, number>
   tickets: Ticket[]
   error?: string
@@ -25,6 +27,19 @@ export const STATUS_ORDER = [
   "In Review",
   "Working",
 ] as const
+
+export type Agent = {
+  pid: number
+  cwd: string
+  kind: string
+  startedAt: number
+  sessionId: string
+  name?: string
+  root: string | null
+  projectKey: string | null
+  projectName: string | null
+  taskId: string | null
+}
 
 export type Action =
   | "approve"
@@ -54,6 +69,13 @@ export const ACTION_LABEL: Record<Action, string> = {
   reopen: "Reopen",
 }
 
+// Statuses sitting behind a human gate — these are what need your attention.
+export const ATTENTION_STATUSES = ["Backlog", "In Review", "Blocked"] as const
+
+export function needsAttention(status: string): boolean {
+  return (ATTENTION_STATUSES as readonly string[]).includes(status)
+}
+
 async function req<T>(url: string, body?: unknown): Promise<T> {
   const res = await fetch(
     url,
@@ -76,4 +98,5 @@ export const api = {
   unregister: (path: string) => req<{ ok: boolean }>("/api/unregister", { path }),
   action: (root: string, id: string, action: Action, msg = "") =>
     req<{ ok: boolean; out: string }>("/api/action", { root, id, action, msg }),
+  agents: () => req<Agent[]>("/api/agents"),
 }

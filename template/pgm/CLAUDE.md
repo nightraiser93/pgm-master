@@ -33,7 +33,7 @@ No code changes without a ticket. The ticket, the branch, and the PR are one cha
 
 1. **Task first.** Every change must trace to a `<KEY>-#####`. None exists? Create one (`board.py new "…"`) and get it **Approved** before writing code. No approved ticket → no work.
 2. **One branch per task**, named `<type>/<KEY>-#####-<slug>` (gitflow prefix per the global git guardrails). Create it when you `start` the ticket. Example: `feat/KAUT-00003-duckdb-data-layer`.
-3. **Commits reference the task** — include `<KEY>-#####` in the message. (Global commit trailer still applies.)
+3. **Commits reference the task** — include `<KEY>-#####` in the message, **or the Jira key** if the ticket has a `jira:` association (`board.py start`/`wt` print the exact ref). The pgm id still owns the branch/board/PR. (Global commit trailer still applies.)
 4. **One PR per task.** Open it when you move the ticket to `In Review`:
    - **Title:** conventional + task, e.g. `feat: KAUT-00003 DuckDB + Parquet data layer`.
    - **Body:** the task id/link, its **Intent** and **Acceptance criteria** (from the ticket), **What changed**, **Tests**. Ready (not draft).
@@ -55,6 +55,7 @@ python3 pgm/board.py approve <id> [msg]  # Backlog/Blocked -> Approved (HUMAN)
 python3 pgm/board.py working <id> [msg]  # In Review -> Working        (HUMAN)
 python3 pgm/board.py reopen  <id> [msg]  # Working/In Review -> In Progress (HUMAN)
 python3 pgm/board.py new "title" [epic]  # scaffold the next <KEY>-##### ticket
+python3 pgm/board.py jira    <id> <KEY>   # associate a Jira issue ("-"/"clear" removes)
 ```
 `<id>` accepts `1`, `00001`, or `<KEY>-00001`. `board.py` refuses illegal jumps (you can't skip a gate).
 

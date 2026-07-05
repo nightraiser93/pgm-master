@@ -8,7 +8,7 @@ truth — a project's `pgm/CLAUDE.md` is a copy of these rules for the agent.
 | File | Role |
 |------|------|
 | `project.md` | Project descriptor. Frontmatter `key:` is the **ticket prefix** (e.g. `KAUT`). Also `name`, `status`. The monitor reads this. |
-| `<KEY>-#####.md` | One ticket each. **YAML frontmatter is the single source of truth** (`id, title, status, type, epic, depends`). Body: Slice value, Intent, Acceptance criteria, Subtasks, Comments. |
+| `<KEY>-#####.md` | One ticket each. **YAML frontmatter is the single source of truth** (`id, title, status, type, epic, depends`; optional `jira`). Body: Slice value, Intent, Acceptance criteria, Subtasks, Comments. |
 | `README.md` | The board. Table auto-generated between `<!-- BOARD:START/END -->`. Never hand-edited. |
 | `board.py` | **Thin shim** (~15 lines). Points the shared engine at this folder (`PGM_DIR`) and execs it. Only sanctioned way to change status; regenerates the board. Same `python3 pgm/board.py …` CLI everywhere. |
 | `_TEMPLATE.md` | Copy for new tickets. |
@@ -27,7 +27,7 @@ Backlog ─(YOU: approve)─▶ Approved ─(Claude: start)─▶ In Progress �
 ## Change discipline — every change ↔ a task
 1. **No code without a task.** Every change traces to a `<KEY>-#####`; none exists → `board.py new` and get it **Approved** first.
 2. **One branch per task:** `<type>/<KEY>-#####-<slug>` (gitflow prefix), created at `start`. `board.py start` prints it.
-3. **Commits reference** the `<KEY>-#####`.
+3. **Commits reference** the `<KEY>-#####` — **unless** the ticket has an associated Jira issue (`jira:` in frontmatter), in which case commits reference the **Jira key** instead. The pgm id always owns the branch, board, and PR; Jira just rides the commit trail. `board.py start`/`wt` print the exact ref to use.
 4. **One PR per task**, opened at `review`: conventional title with the id; body carries the ticket's Intent + Acceptance criteria + What changed + Tests. Ready, not draft.
 5. **Merge + human `working`** closes the loop.
 
@@ -45,6 +45,7 @@ python3 pgm/board.py block   <id> "why"  # -> Blocked                       (Cla
 python3 pgm/board.py reopen  <id> [msg]  # Working/In Review -> In Progress (HUMAN)
 python3 pgm/board.py link    <id> <rel> <target> [note]  # add a cross-task link
 python3 pgm/board.py unlink  <id> <target>               # remove a link
+python3 pgm/board.py jira    <id> <JIRA-KEY>             # associate a Jira issue ("-"/"clear" removes)
 python3 pgm/board.py ready                               # workable tasks (Approved, deps done)
 python3 pgm/board.py wt <id>                             # start <id> + isolated git worktree
 python3 pgm/board.py wt rm <id>                          # remove <id>'s worktree (after PR raised)
@@ -98,8 +99,14 @@ type: feature            # feature|fix|chore|docs|refactor
 epic: E1 Foundation
 depends: [00002]         # same-project ordering (by number)
 links: [blocked-by:/abs/path/other-proj/pgm/AAA-00007.md, relates-to:00004]  # optional, cross-project ok
+jira: PROJ-1234          # optional — associate a Jira issue; commits reference this instead of the pgm id
 ---
 ```
+The pgm `id` is always the task's identity here (branch, board, PR). `jira` is an **optional
+association** for teams that also track the work in Jira — set it with `board.py jira <id> <KEY>`.
+When present, the board and the monitor show it, and **commit messages reference the Jira key
+instead of the `<KEY>-#####`**. Add `jira_base: https://your.atlassian.net` to `project.md` to make
+the monitor's Jira badges clickable (`<jira_base>/browse/<KEY>`).
 
 ## Notifications (optional — Telegram)
 The engine can ping you on Telegram when a task reaches a gate: **`review`** (PR raised — ready for

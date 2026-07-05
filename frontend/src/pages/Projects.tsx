@@ -1,7 +1,16 @@
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import { Link } from "react-router-dom"
-import { FolderPlus, Pencil, Trash2, AlertTriangle, ArrowRight } from "lucide-react"
-import { api, STATUS_ORDER, type Project } from "@/lib/api"
+import {
+  FolderPlus,
+  Pencil,
+  Trash2,
+  AlertTriangle,
+  ArrowRight,
+  AlertCircle,
+} from "lucide-react"
+import { api, STATUS_ORDER, needsAttention, type Project } from "@/lib/api"
+import { useProjects } from "@/lib/projects-context"
+import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -23,22 +32,9 @@ import {
 } from "@/components/ui/dialog"
 
 export function Projects() {
-  const [projects, setProjects] = useState<Project[]>([])
-  const [loading, setLoading] = useState(true)
+  const { projects, loading, reload } = useProjects()
 
-  async function load() {
-    try {
-      setProjects(await api.projects())
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  useEffect(() => {
-    load()
-    const t = setInterval(load, 5000)
-    return () => clearInterval(t)
-  }, [])
+  const sorted = [...projects].sort((a, b) => attentionOf(b) - attentionOf(a))
 
   return (
     <div className="space-y-6">
@@ -58,7 +54,7 @@ export function Projects() {
           }
           onSubmit={async (path) => {
             await api.register(path)
-            await load()
+            await reload()
           }}
         />
       </div>
@@ -69,8 +65,8 @@ export function Projects() {
         <EmptyState />
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {projects.map((p) => (
-            <ProjectCard key={p.root} p={p} onChange={load} />
+          {sorted.map((p) => (
+            <ProjectCard key={p.root} p={p} onChange={reload} />
           ))}
         </div>
       )}
@@ -78,8 +74,14 @@ export function Projects() {
   )
 }
 
+function attentionOf(p: Project): number {
+  if (p.error) return 0
+  return p.tickets.filter((t) => needsAttention(t.status)).length
+}
+
 function ProjectCard({ p, onChange }: { p: Project; onChange: () => void }) {
   const total = Object.values(p.counts || {}).reduce((a, b) => a + b, 0)
+  const attention = attentionOf(p)
 
   async function remove() {
     if (!confirm(`Disconnect ${p.name}?\n${p.root}`)) return
@@ -108,7 +110,14 @@ function ProjectCard({ p, onChange }: { p: Project; onChange: () => void }) {
   }
 
   return (
-    <Card className="transition-shadow hover:shadow-md">
+    <Card
+      className={cn(
+        "border-l-4 transition-shadow hover:shadow-md",
+        attention > 0
+          ? "border-l-amber-500 shadow-sm shadow-amber-500/10"
+          : "border-l-transparent",
+      )}
+    >
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
@@ -117,6 +126,12 @@ function ProjectCard({ p, onChange }: { p: Project; onChange: () => void }) {
               <Badge variant="secondary" className="shrink-0 font-mono text-[11px]">
                 {p.key}
               </Badge>
+              {attention > 0 && (
+                <Badge className="shrink-0 gap-1 border-transparent bg-amber-500/15 font-medium text-amber-700 dark:text-amber-300">
+                  <AlertCircle className="size-3" />
+                  {attention}
+                </Badge>
+              )}
             </CardTitle>
             <p className="mt-1 break-all text-xs text-muted-foreground">{p.root}</p>
           </div>
