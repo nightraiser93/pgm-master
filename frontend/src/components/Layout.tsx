@@ -44,12 +44,12 @@ export function Layout() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-secondary/40 to-background">
       <header className="sticky top-0 z-10 border-b bg-background/80 backdrop-blur">
-        <div className="mx-auto flex max-w-6xl items-center gap-6 px-6 py-3">
+        <div className="mx-auto flex max-w-[1600px] items-center gap-6 px-4 py-2.5 lg:px-8">
           <div className="flex items-center gap-2">
-            <div className="grid size-7 place-items-center rounded-md bg-gradient-to-br from-primary to-primary/70 text-primary-foreground text-xs font-bold shadow-sm">
+            <div className="grid size-6 place-items-center rounded-md bg-gradient-to-br from-primary to-primary/70 text-primary-foreground text-[10px] font-bold shadow-sm">
               pgm
             </div>
-            <span className="font-semibold tracking-tight">pgm-master</span>
+            <span className="text-sm font-semibold tracking-tight">pgm-master</span>
           </div>
           <nav className="flex items-center gap-1">
             <Tab to="/" icon={LayoutGrid} label="Projects" />
@@ -59,7 +59,7 @@ export function Layout() {
           </nav>
         </div>
       </header>
-      <main className="mx-auto max-w-6xl px-6 py-8">
+      <main className="mx-auto max-w-[1600px] px-4 py-5 lg:px-8">
         <Outlet />
       </main>
     </div>

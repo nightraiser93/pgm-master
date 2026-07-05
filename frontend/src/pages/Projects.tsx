@@ -37,11 +37,11 @@ export function Projects() {
   const sorted = [...projects].sort((a, b) => attentionOf(b) - attentionOf(a))
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div className="flex items-end justify-between">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Projects</h1>
-          <p className="text-sm text-muted-foreground">
+          <h1 className="text-lg font-semibold tracking-tight">Projects</h1>
+          <p className="text-xs text-muted-foreground">
             Every connected <code className="text-xs">pgm/</code> folder, live.
           </p>
         </div>
@@ -64,7 +64,7 @@ export function Projects() {
       ) : projects.length === 0 ? (
         <EmptyState />
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
           {sorted.map((p) => (
             <ProjectCard key={p.root} p={p} onChange={reload} />
           ))}
@@ -112,16 +112,16 @@ function ProjectCard({ p, onChange }: { p: Project; onChange: () => void }) {
   return (
     <Card
       className={cn(
-        "border-l-4 transition-shadow hover:shadow-md",
+        "gap-3 py-4 border-l-4 transition-shadow hover:shadow-md",
         attention > 0
           ? "border-l-amber-500 shadow-sm shadow-amber-500/10"
           : "border-l-transparent",
       )}
     >
-      <CardHeader className="pb-3">
+      <CardHeader className="pb-2">
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
-            <CardTitle className="flex items-center gap-2 text-base">
+            <CardTitle className="flex items-center gap-2 text-sm">
               <span className="truncate">{p.name}</span>
               <Badge variant="secondary" className="shrink-0 font-mono text-[11px]">
                 {p.key}
@@ -158,7 +158,7 @@ function ProjectCard({ p, onChange }: { p: Project; onChange: () => void }) {
           </div>
         </div>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-3">
         <div className="flex flex-wrap gap-1.5">
           {STATUS_ORDER.filter((s) => p.counts?.[s]).map((s) => (
             <Badge key={s} variant="outline" className="font-normal">
