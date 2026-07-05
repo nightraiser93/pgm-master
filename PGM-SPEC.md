@@ -142,12 +142,14 @@ Symlink the canonical engine to the stable path the shims look for, and the cano
 skill into your personal skills dir — both single-source, edited in this repo, live everywhere:
 ```
 ln -s /path/to/pgm-master/pgm_engine.py  ~/.pgm/pgm_engine.py     # engine (or set $PGM_ENGINE)
-# skills: pgm (rulebook) + pgm-codeit (the /pgm-codeit dev-loop driver)
+# skills: pgm (rulebook) + pgm-codeit (the /pgm-codeit dev-loop driver) + pgm-add-task (the /pgm-add-task ticket creator)
 for s in /path/to/pgm-master/skills/*/; do n=$(basename "$s"); mkdir -p ~/.claude/skills/"$n"; \
   ln -sf "$s/SKILL.md" ~/.claude/skills/"$n"/SKILL.md; done
 ```
 The **`pgm`** skill tells the agent how to work any repo's board; **`pgm-codeit`** is an invokable
-command (`/pgm-codeit`) that drives the loop (read board → pick a READY task → start→build→review→PR).
+command (`/pgm-codeit`) that drives the loop (read board → pick a READY task → start→build→review→PR);
+**`pgm-add-task`** is an invokable command (`/pgm-add-task`) that creates ticket(s) — from a doc,
+splitting it into multiple tasks when it warrants that, or by interviewing the user when there's no doc.
 So a repo needs only the tiny `board.py` shim + tickets, never a copied `pgm/CLAUDE.md`.
 
 ## Bootstrapping a new project
