@@ -26,6 +26,7 @@ for s in "$PWD"/skills/*/; do n=$(basename "$s"); mkdir -p ~/.claude/skills/"$n"
   - `skills/pgm/SKILL.md` — the **agent-rules doc** (the `pgm` skill; the passive rulebook). Keep in sync with `PGM-SPEC.md`.
   - `skills/pgm-codeit/SKILL.md` — the **`/pgm-codeit` command** (the active driver: read board → pick READY → start→build→review→PR).
   - `skills/pgm-add-task/SKILL.md` — the **`/pgm-add-task` command** (creates ticket(s) from a doc — split into multiple when it warrants — or by interviewing the user).
+  - `skills/pgm-address-comments/SKILL.md` — the **`/pgm-address-comments <TICKET_ID>` command** (addresses a human's unresolved review comments on a ticket's own PR: code change + reply where actionable, clarifying question where not; ticket stays In Review, threads never auto-resolved).
 - `template/pgm/` — bootstrap kit copied into new projects (shim `board.py`, `CLAUDE.md`, `_TEMPLATE.md`, `project.md`, `README.md`). Contains **no** engine logic.
 - `app.py` — FastAPI dashboard. Endpoints: `/`, `/api/projects`, `/api/register`, `/api/unregister`, `/api/action`.
 - **Actions shell out to each project's `pgm/board.py`** (the shim → engine) — so per-project keys, gate rules, and audit comments are respected. The monitor never edits tickets directly.
