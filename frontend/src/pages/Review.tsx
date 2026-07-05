@@ -140,17 +140,17 @@ export function Review() {
   const projectOpts = projects.filter((p) => !p.error)
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-4">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Review</h1>
-        <p className="text-sm text-muted-foreground">
+        <h1 className="text-lg font-semibold tracking-tight">Review</h1>
+        <p className="text-xs text-muted-foreground">
           {queue.length} ticket{queue.length === 1 ? "" : "s"} · j/k or ↓/↑ to move ·
           hotkeys act on the selected ticket.
         </p>
       </div>
 
       <div className="flex gap-4">
-        <div className="flex w-80 shrink-0 flex-col gap-3">
+        <div className="flex w-72 shrink-0 flex-col gap-2">
           <div className="space-y-2">
             <div className="relative">
               <Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
@@ -192,7 +192,7 @@ export function Review() {
                     key={key}
                     onClick={() => setSelectedKey(key)}
                     className={cn(
-                      "flex w-full flex-col gap-1 border-b px-3 py-2.5 text-left transition-colors last:border-b-0",
+                      "flex w-full flex-col gap-1 border-b px-3 py-2 text-left transition-colors last:border-b-0 odd:bg-muted/30",
                       isSelected ? "bg-secondary" : "hover:bg-secondary/50",
                     )}
                   >
@@ -265,7 +265,7 @@ function DetailPane({
   return (
     <div
       key={rowKey(current)}
-      className="flex flex-col gap-4 p-6 duration-200 animate-in fade-in"
+      className="flex flex-col gap-3 p-5 duration-200 animate-in fade-in"
     >
       <div className="flex items-center justify-between text-xs text-muted-foreground">
         <span className="tabular-nums">
@@ -305,7 +305,7 @@ function DetailPane({
         </span>
       </div>
 
-      <h2 className="text-xl font-semibold leading-snug">{current.title}</h2>
+      <h2 className="text-base font-semibold leading-snug">{current.title}</h2>
 
       <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
         {current.epic && (

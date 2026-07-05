@@ -120,10 +120,10 @@ export function Tasks() {
   const projectOpts = projects.filter((p) => !p.error)
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Tasks</h1>
-        <p className="text-sm text-muted-foreground">
+        <h1 className="text-lg font-semibold tracking-tight">Tasks</h1>
+        <p className="text-xs text-muted-foreground">
           {filtered.length} of {rows.length} across all projects.
         </p>
       </div>
@@ -132,7 +132,7 @@ export function Tasks() {
         <button
           onClick={() => setParam("attention", attentionOnly ? "all" : "1")}
           className={cn(
-            "flex w-full items-center gap-3 rounded-lg border px-4 py-3 text-left transition-colors",
+            "flex w-full items-center gap-3 rounded-lg border px-3 py-2 text-left transition-colors",
             attentionOnly
               ? "border-amber-500/60 bg-amber-500/15"
               : "border-amber-500/30 bg-amber-500/5 hover:bg-amber-500/10",
@@ -194,7 +194,7 @@ export function Tasks() {
           </CardContent>
         </Card>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
           {filtered.map((r) => (
             <TaskCard
               key={`${r.projectKey}-${r.id}`}
@@ -273,7 +273,7 @@ function TaskCard({
     <Card
       onClick={onOpen}
       className={cn(
-        "flex cursor-pointer flex-col border-l-4 transition-shadow hover:shadow-md",
+        "flex cursor-pointer flex-col gap-0 border-l-4 py-0 transition-shadow hover:shadow-md",
         attention
           ? "border-l-amber-500 shadow-sm shadow-amber-500/10 ring-1 ring-amber-500/20"
           : agentActive
@@ -281,7 +281,7 @@ function TaskCard({
             : "border-l-transparent",
       )}
     >
-      <CardContent className="flex flex-1 flex-col gap-3 py-4">
+      <CardContent className="flex flex-1 flex-col gap-2 py-3">
         <div className="flex items-center justify-between gap-2">
           <span className="flex items-center gap-1.5">
             <span className="font-mono text-xs text-muted-foreground tabular-nums">

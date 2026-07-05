@@ -32,10 +32,10 @@ export function Agents() {
   }, [])
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Agents</h1>
-        <p className="text-sm text-muted-foreground">
+        <h1 className="text-lg font-semibold tracking-tight">Agents</h1>
+        <p className="text-xs text-muted-foreground">
           {loading ? "Loading…" : `${agents.length} active Claude Code session${agents.length === 1 ? "" : "s"}.`}
         </p>
       </div>
@@ -47,10 +47,10 @@ export function Agents() {
           </CardContent>
         </Card>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
           {agents.map((a) => (
-            <Card key={a.sessionId}>
-              <CardContent className="flex flex-col gap-3 py-4">
+            <Card key={a.sessionId} className="gap-0 py-0">
+              <CardContent className="flex flex-col gap-2 py-3">
                 <div className="flex items-center justify-between gap-2">
                   <span className="flex items-center gap-1.5 text-sm font-semibold">
                     <Bot className="size-4 text-muted-foreground" />
