@@ -215,6 +215,8 @@ def transition(cmd: str, tid: str, msg: str):
     if cur not in froms:
         sys.exit(f"illegal move: {f.stem} is '{cur}', {cmd} needs {froms}")
     text = re.sub(r"(?m)^status:.*$", f"status: {to}", text, count=1)
+    if cmd == "review" and msg.strip():
+        text = set_fm_field(text, "pr", msg.strip())
     date = datetime.date.today().isoformat()
     note = f"- {date} [{cur} → {to}] {actor}: {msg or cmd}"
     text = re.sub(r"^- _\(none yet.*\)_\s*$", "", text, flags=re.M)

@@ -100,6 +100,7 @@ epic: E1 Foundation
 depends: [00002]         # same-project ordering (by number)
 links: [blocked-by:/abs/path/other-proj/pgm/AAA-00007.md, relates-to:00004]  # optional, cross-project ok
 jira: PROJ-1234          # optional — associate a Jira issue; commits reference this instead of the pgm id
+pr: https://github.com/org/repo/pull/123   # auto-set by `board.py review <id> "<pr-url>"`; omitted until then
 ---
 ```
 The pgm `id` is always the task's identity here (branch, board, PR). `jira` is an **optional
@@ -107,6 +108,9 @@ association** for teams that also track the work in Jira — set it with `board.
 When present, the board and the monitor show it, and **commit messages reference the Jira key
 instead of the `<KEY>-#####`**. Add `jira_base: https://your.atlassian.net` to `project.md` to make
 the monitor's Jira badges clickable (`<jira_base>/browse/<KEY>`).
+
+`pr` is written automatically the moment a PR url is passed to `board.py review <id> "<pr-url>"` —
+no extra step. If no url is passed, the field is simply omitted (never written blank).
 
 ## Notifications (optional — Telegram)
 The engine can ping you on Telegram when a task reaches a gate: **`review`** (PR raised — ready for
