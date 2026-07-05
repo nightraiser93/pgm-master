@@ -1,7 +1,7 @@
 # pgm-master
 
-Cross-project dashboard over many `pgm/` folders. One place to watch every project's
-board, approve tickets, and sign off finished work.
+**pgm — Project God Mode.** Cross-project dashboard over many `pgm/` folders. One place to
+watch every project's board, approve tickets, and sign off finished work.
 
 ## How it works
 - **Registry:** `~/.pgm/projects.json` — a list of project root paths.
