@@ -24,9 +24,11 @@ for s in "$PWD"/skills/*/; do n=$(basename "$s"); mkdir -p ~/.claude/skills/"$n"
 ```
 Skills installed: **`pgm`** (the rulebook — status gates, one-task-one-session, worktrees),
 **`pgm-codeit`** (invoke `/pgm-codeit` in any repo to drive the dev loop: read board → pick a READY
-task → start → build → review → PR), and **`pgm-add-task`** (invoke `/pgm-add-task` to create
+task → start → build → review → PR), **`pgm-add-task`** (invoke `/pgm-add-task` to create
 ticket(s) — from a doc, splitting it into multiple tasks when it warrants that, or by interviewing
-you when there's no doc). A consuming repo then needs only the tiny `board.py` shim + its
+you when there's no doc), and **`pgm-address-comments`** (invoke `/pgm-address-comments <TICKET_ID>`
+to address a human's unresolved review comments on that ticket's own PR — code change + reply where
+actionable, clarifying question where not; ticket stays In Review). A consuming repo then needs only the tiny `board.py` shim + its
 tickets — **no** copied `pgm/CLAUDE.md`.
 
 ## Run
